@@ -1,38 +1,46 @@
-import React, { createFactory, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import NormalChannel from "./normal_server__channel";
-import * as messageActions from "../../store/message";
-import { useParams, useHistory, Link } from "react-router-dom";
+// import * as messageActions from "../../store/message";
+import { useParams, useHistory } from "react-router-dom";
 import * as channelActions from '../../store/channel';
 import { Route } from "react-router-dom";
 import MessageMain from "../message_main/message_main";
+import GeneralBar from "../top_bar/general_bar";
 
 function ChannelsList() {
   const { serverId } = useParams();
   const dispatch = useDispatch();
   const history = useHistory();
   const server = useSelector(state => state.server[serverId])
-  let user = useSelector(state => state.session.user)
-  let channelsState = useSelector((state) => state.channel.channels);
+  // let user = useSelector(state => state.session.user)
+  let channelsState = useSelector((state) => state.channel);
   const [createChannelState, setCreateChannelState] = useState(false)
-  const [channelCreated, setChannelCreated] = useState(false)
-  const [channelDeleted, setChannelDeleted] = useState(false)
+  // const [channelCreated, setChannelCreated] = useState(false)
+  // const [channelDeleted, setChannelDeleted] = useState(false)
   const [channelisloaded, setChannelisloaded,] = useState(false)
 
   const channelsList = Object.values(channelsState)
 
   useEffect(() => {
+    const lastChannel = localStorage.getItem(serverId)
+    if (lastChannel) history.push(`/channels/${serverId}/${lastChannel}`)
+  }, [serverId, history])
+
+  useEffect(() => {
     dispatch(channelActions.getChannels(serverId)).then(() => setChannelisloaded(true))
-    return () => setChannelisloaded(false)
-  }, [serverId])
+    return () => {
+      dispatch(channelActions.clearChannelsActions())
+    }
+  }, [serverId, dispatch])
 
 
 
-  const deleteChannel = (e, channelId) => {
-    e.preventDefault()
-    dispatch(channelActions.deleteChannel(channelId, serverId))
-      .then(() => setChannelDeleted(!channelDeleted))
-  }
+  // const deleteChannel = (e, channelId) => {
+  //   e.preventDefault()
+  //   dispatch(channelActions.deleteChannel(channelId, serverId))
+  //     .then(() => setChannelDeleted(!channelDeleted))
+  // }
 
   const el = document.querySelector("body")
   el.addEventListener('contextmenu', function (ev) {
@@ -40,33 +48,24 @@ function ChannelsList() {
     return false;
   }, false);
 
-  const rerenderRef = useRef()
+  // const rerenderRef = useRef()
 
   // if ((window.location.href.endsWith(`/@me/${serverId}/`) || window.location.href.endsWith(`/@me/${serverId}`)) && channelsList) history.push(`/@me/${serverId}/${channelsList[0].id}`)
 
-
-  let newChannel
-  if (server) {
-    newChannel = <Link to={`/@me/${server.id}/add`} ref={rerenderRef}>Add New Channel</Link>
-  }
-
-
-  function CreateChannel() {
+  function CreateChannel({ endChannelCreate }) {
 
     const { serverId } = useParams();
-    const currServer = useSelector(state => state.channel.channels[serverId]);
+    // const currServer = useSelector(state => state.server[serverId]);
     const [channelName, setChannelName] = useState("");
     const [errors, setErrors] = useState([]);
     const dispatch = useDispatch();
-    const history = useHistory();
+    // const history = useHistory();
     const handleSubmit = (e) => {
       e.preventDefault();
       let newErrors = [];
       dispatch(channelActions.createChannel({ name: channelName, server_id: serverId }))
         .then(() => {
-          dispatch(channelActions.getChannels(serverId))
-          setChannelName("");
-          setChannelCreated(!channelCreated)
+          endChannelCreate()
         })
         .catch(async (res) => {
           const data = await res.json();
@@ -100,6 +99,9 @@ function ChannelsList() {
       </div>
     );
   }
+  function endChannelCreate() {
+    setCreateChannelState(false)
+  }
 
   return (
     <>
@@ -109,7 +111,7 @@ function ChannelsList() {
         <div className="text_channels channel_list__div">
           <p className="text_channels_paragraph">Text Channels</p>
           <span className="add_text_channel_paragraph" onClick={() => setCreateChannelState(!createChannelState)}>{createChannelState ? "Cancel" : "Add Channel"}</span>
-          {createChannelState && <CreateChannel props={{ createChannelState, setCreateChannelState }} />}
+          {createChannelState && <CreateChannel endChannelCreate={endChannelCreate} />}
           {channelsList &&
             channelsList.map((channel, index) => (
               <div className="text_channels individual_text_channel">
@@ -120,6 +122,7 @@ function ChannelsList() {
       </div>
       <Route path='/channels/:serverId/:channelId' exact={false}>
         <MessageMain />
+        <GeneralBar />
       </Route>
     </>
   )
