@@ -8,6 +8,7 @@ from .channels import seed_channels, undo_channels
 from .servers import seed_servers, undo_servers
 from .messages import seed_messages, undo_messages
 from .relationships import seed_relationships, undo_relationships
+from app.models.db import db, environment, SCHEMA
 
 
 # Creates a seed group to hold our commands
@@ -19,6 +20,12 @@ seed_commands = AppGroup('seed')
 
 @seed_commands.command('all')
 def seed():
+    if environment == 'production':
+        # Before seeding, truncate all tables prefixed with schema name
+        db.session.execute(
+            f"TRUNCATE table {SCHEMA}.users RESTART IDENTITY CASCADE;")
+        # Add a truncate command here for every table that will be seeded.
+        db.session.commit()
     seed_users()
     seed_servers()
     seed_userservers()
