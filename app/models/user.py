@@ -1,21 +1,23 @@
-from .db import db
+from .db import db, environment, SCHEMA, add_prefix_for_prod
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 # from app.models import ServerUser
 
+
 class User(db.Model, UserMixin):
 
     __tablename__ = 'users'
-
+    if environment == "production":
+        __table_args__ = {'schema': SCHEMA}
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     hashed_password = db.Column(db.String(100), nullable=False)
     avatar_link = db.Column(db.String(200))
 
-    servers = db.relationship('Server', secondary="server_users", back_populates='users', cascade="all,delete")
+    servers = db.relationship(
+        'Server', secondary="server_users", back_populates='users', cascade="all,delete")
     owned_servers = db.relationship('Server', back_populates='owner')
-
 
     def to_dict(self):
         return {
@@ -26,6 +28,7 @@ class User(db.Model, UserMixin):
             "avatar_link": self.avatar_link,
             # "personal_server":  [server.to_dict() for server in self.servers if server.user_id==self.id and server.type == "Private"]
         }
+
     def to_safe_dict(self):
         return {
             "id": self.id,
@@ -33,20 +36,18 @@ class User(db.Model, UserMixin):
             "avatar_link": self.avatar_link,
             # "personal_server":  [server.to_dict() for server in self.servers if server.user_id==self.id and server.type == "Private"]
         }
-        
-#if
+
+# if
     def get_servers(self):
         return [server.to_dict() for server in self.servers]
-    
+
     @property
     def password(self):
         return self.hashed_password
 
-
     @password.setter
     def password(self, password):
         self.hashed_password = generate_password_hash(password)
-
 
     def check_password(self, password):
         return check_password_hash(self.password, password)

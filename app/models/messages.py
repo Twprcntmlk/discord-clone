@@ -1,17 +1,23 @@
-from .db import db
+from .db import db, environment, SCHEMA, add_prefix_for_prod
 
 
 class Message(db.Model):
 
     __tablename__ = 'messages'
+    if environment == "production":
+        __table_args__ = {'schema': SCHEMA}
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(
+        add_prefix_for_prod('users.id')), nullable=False)
     content = db.Column(db.String(255), nullable=False)
-    channel_id = db.Column(db.Integer, db.ForeignKey('channels.id'), nullable=False)
+    channel_id = db.Column(db.Integer, db.ForeignKey(
+        add_prefix_for_prod('channels.id')), nullable=False)
     # created_at = db.Column(db.DateTime, server_default=datetime.now())
-    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), server_onupdate=db.func.now())
+    created_at = db.Column(db.DateTime(timezone=True),
+                           server_default=db.func.now())
+    updated_at = db.Column(db.DateTime(
+        timezone=True), server_default=db.func.now(), server_onupdate=db.func.now())
 
     def to_dict(self):
         return {
